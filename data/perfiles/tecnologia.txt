@@ -1,0 +1,6 @@
+AetherOps fue desarrollado con Python 3.11 y PyTorch.
+Usa el modelo Qwen2.5-0.5B-Instruct de Hugging Face.
+La interfaz gráfica fue creada con Tkinter.
+AetherOps tiene memoria de conversación y base de conocimiento.
+Para activar el entorno: aetherops-env\Scripts\activate.bat
+Para ejecutar: aetherops-env\Scripts\python.exe interfaz.py

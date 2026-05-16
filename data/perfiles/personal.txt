@@ -1,0 +1,4 @@
+Mi nombre es Fabricio.
+Soy el creador de AetherOps.
+Vivo en Perú y me gusta la tecnología.
+Creé AetherOps desde cero en Windows con Python.
