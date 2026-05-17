@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import os
-import shutil
-import requests
+from groq import Groq
 
 app = FastAPI(title="AetherOps API", version="1.0.0")
 
@@ -15,11 +14,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
-HF_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
-HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-documentos = []
+perfiles = {
+    "personal": "Eres AetherOps, una IA personal de Fabricio. Respondes en español, eres directo y útil.",
+    "trabajo": "Eres AetherOps, asistente de trabajo de Fabricio. Ayudas con tareas profesionales en español.",
+    "tecnico": "Eres AetherOps, asistente técnico de Fabricio. Eres experto en programación y tecnología."
+}
 
 class PreguntaRequest(BaseModel):
     pregunta: str
@@ -28,26 +29,6 @@ class PreguntaRequest(BaseModel):
 class PreguntaResponse(BaseModel):
     respuesta: str
     documentos_cargados: int
-
-def preguntar_hf(pregunta: str, contexto: str = "") -> str:
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    prompt = f"Eres AetherOps, la IA personal de Fabricio. {contexto}\nPregunta: {pregunta}\nRespuesta:"
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "max_new_tokens": 100,
-            "temperature": 0.7,
-            "return_full_text": False
-        }
-    }
-    try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
-        result = response.json()
-        if isinstance(result, list) and len(result) > 0:
-            return result[0].get("generated_text", "No pude responder.").strip()
-        return "No pude responder en este momento."
-    except Exception as e:
-        return f"Error: {str(e)}"
 
 @app.get("/")
 def inicio():
@@ -60,19 +41,24 @@ def inicio():
 
 @app.get("/estado")
 def estado():
-    return {
-        "estado": "online",
-        "documentos": len(documentos)
-    }
+    return {"estado": "online", "documentos": 0}
 
 @app.post("/preguntar", response_model=PreguntaResponse)
 def preguntar(request: PreguntaRequest):
-    contexto = f"Perfil activo: {request.perfil}."
-    respuesta = preguntar_hf(request.pregunta, contexto)
-    return PreguntaResponse(
-        respuesta=respuesta,
-        documentos_cargados=len(documentos)
-    )
+    sistema = perfiles.get(request.perfil, perfiles["personal"])
+    try:
+        respuesta = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[
+                {"role": "system", "content": sistema},
+                {"role": "user", "content": request.pregunta}
+            ],
+            max_tokens=1000
+        )
+        texto = respuesta.choices[0].message.content
+    except Exception as e:
+        texto = f"Error: {str(e)}"
+    return PreguntaResponse(respuesta=texto, documentos_cargados=0)
 
 @app.post("/limpiar-memoria")
 def limpiar_memoria():
