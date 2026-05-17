@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import os
-from groq import Groq
 
 app = FastAPI(title="AetherOps API", version="1.0.0")
 
@@ -14,9 +13,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-groq_key = os.environ.get("GROQ_API_KEY", "NO_KEY")
-print(f"GROQ KEY encontrada: {groq_key[:8]}...")
-client = Groq(api_key=groq_key)
+try:
+    from groq import Groq
+    groq_key = os.environ.get("GROQ_API_KEY", "NO_KEY")
+    print(f"==> GROQ KEY: {groq_key[:8]}...")
+    client = Groq(api_key=groq_key)
+    print("==> Groq client OK")
+except Exception as e:
+    print(f"==> ERROR GROQ: {e}")
+    client = None
 
 perfiles = {
     "personal": "Eres AetherOps, una IA personal de Fabricio. Respondes en español, eres directo y útil.",
@@ -47,6 +52,9 @@ def estado():
 
 @app.post("/preguntar", response_model=PreguntaResponse)
 def preguntar(request: PreguntaRequest):
+    if client is None:
+        return PreguntaResponse(respuesta="Error: Groq no inicializado", documentos_cargados=0)
+    
     sistema = perfiles.get(request.perfil, perfiles["personal"])
     try:
         respuesta = client.chat.completions.create(
@@ -60,6 +68,7 @@ def preguntar(request: PreguntaRequest):
         texto = respuesta.choices[0].message.content
     except Exception as e:
         texto = f"Error: {str(e)}"
+    
     return PreguntaResponse(respuesta=texto, documentos_cargados=0)
 
 @app.post("/limpiar-memoria")
