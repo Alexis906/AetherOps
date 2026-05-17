@@ -275,3 +275,34 @@ AetherOps: [CALCULAR] El resultado de 500 * 3 es 1500
 Tu: Que hora es?
 AetherOps: [HORA] Fecha y hora actual: 16/05/2026 17:45:08
 
+[2026-05-16 17:53:02] [personal]
+Tu: Quien eres?
+AetherOps: Soy una inteligencia artificial personal llamado Fabricio. He sido creado por el software personalizado AetherOps. He aprendido de todos los que he interactuado con y estoy mejorando continuamente.
+
+[2026-05-16 17:54:57] [personal]
+Tu: Cuanto es 350 * 12?
+AetherOps: [CALCULAR] El resultado de 350 * 12 es 4200
+
+[2026-05-16 17:55:49] [personal]
+Tu: Que hora es?
+AetherOps: [HORA] Fecha y hora actual: 16/05/2026 17:55:49
+
+[2026-05-16 17:56:54] [personal]
+Tu: Busca en internet noticias de Peru
+AetherOps: [WEB] Encontre esto en internet:
+1. Peru: Peru, officially the Republic of Peru, is a country in western South America. It is bordered to the north by Ecuador and Colombia, to the east by Braz
+2. Peru: Flag of Peru Peru, officially the Republic of Peru, is a presidential republic in western South America bordering Ecuador, Colombia, Brazil, Bolivia, 
+
+
+[2026-05-16 17:57:44] [personal]
+Tu: Guarda una nota que debo estudiar Python manana
+AetherOps: [NOTA] Nota guardada correctamente: debo estudiar python manana
+
+[2026-05-17 04:57:42] [personal]
+Tu: Quien eres?
+AetherOps: Soy AetherOps, una inteligencia artificial creada por IA Personal de Fabricio.
+
+[2026-05-17 04:58:08] [personal]
+Tu: Cuanto es 100 + 200?
+AetherOps: [CALCULAR] El resultado de 100 + 200 es 300
+

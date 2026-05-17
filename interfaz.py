@@ -6,6 +6,7 @@ import tkinter.filedialog as fd
 from core.brain import AetherOpsBrain
 from core.rag import AetherOpsRAG
 from core.agente import AetherOpsAgente
+from core.feedback import guardar_feedback, estadisticas_feedback, exportar_dataset_entrenamiento
 
 PERFILES_DIR = os.path.join(os.path.dirname(__file__), "data", "perfiles")
 HISTORIAL_PATH = os.path.join(os.path.dirname(__file__), "data", "historial.txt")
@@ -41,16 +42,19 @@ class AetherOpsUI:
         self.brain = None
         self.rag = AetherOpsRAG()
         self.agente = None
+        self.ultima_pregunta = ""
+        self.ultima_respuesta = ""
         self.ventana = tk.Tk()
         self.perfil_actual = tk.StringVar(value="personal")
         self.ventana.title("AetherOps")
-        self.ventana.geometry("680x600")
+        self.ventana.geometry("680x640")
         self.ventana.configure(bg=BG)
         self.ventana.resizable(False, False)
         self._construir_ui()
         threading.Thread(target=self._cargar_brain, daemon=True).start()
 
     def _construir_ui(self):
+        # Header
         header = tk.Frame(self.ventana, bg=BG2, height=60)
         header.pack(fill=tk.X)
         header.pack_propagate(False)
@@ -62,22 +66,22 @@ class AetherOpsUI:
         tk.Label(header, text="OPS", font=("Consolas", 18, "bold"),
                  bg=BG2, fg=ACCENT2).pack(side=tk.LEFT)
 
-        tk.Button(
-            header, text="Limpiar",
-            font=("Consolas", 8), bg=BG2, fg=TXT2,
-            relief="flat", bd=0,
-            activebackground=BG, activeforeground=ACCENT,
-            command=self._limpiar_memoria
-        ).pack(side=tk.RIGHT, padx=16)
+        tk.Button(header, text="Limpiar",
+                  font=("Consolas", 8), bg=BG2, fg=TXT2,
+                  relief="flat", bd=0,
+                  command=self._limpiar_memoria).pack(side=tk.RIGHT, padx=16)
 
-        tk.Button(
-            header, text="Cargar PDF",
-            font=("Consolas", 8), bg=BG2, fg=ACCENT,
-            relief="flat", bd=0,
-            activebackground=BG, activeforeground=ACCENT,
-            command=self._cargar_pdf
-        ).pack(side=tk.RIGHT, padx=8)
+        tk.Button(header, text="Cargar PDF",
+                  font=("Consolas", 8), bg=BG2, fg=ACCENT,
+                  relief="flat", bd=0,
+                  command=self._cargar_pdf).pack(side=tk.RIGHT, padx=8)
 
+        tk.Button(header, text="Stats",
+                  font=("Consolas", 8), bg=BG2, fg="#FFD700",
+                  relief="flat", bd=0,
+                  command=self._mostrar_stats).pack(side=tk.RIGHT, padx=8)
+
+        # Perfiles
         perfiles_bar = tk.Frame(self.ventana, bg="#0a1020", height=36)
         perfiles_bar.pack(fill=tk.X)
         perfiles_bar.pack_propagate(False)
@@ -106,6 +110,7 @@ class AetherOpsUI:
 
         tk.Frame(self.ventana, bg=ACCENT, height=1).pack(fill=tk.X)
 
+        # Chat
         self.chat = scrolledtext.ScrolledText(
             self.ventana, wrap=tk.WORD,
             bg=BG, fg=TXT, font=FONT,
@@ -119,15 +124,53 @@ class AetherOpsUI:
         self.chat.tag_config("sistema", foreground=TXT2,      font=("Consolas", 9, "italic"))
         self.chat.tag_config("label",   foreground=ACCENT2,   font=("Consolas", 10, "bold"))
         self.chat.tag_config("perfil",  foreground=ACCENT,    font=("Consolas", 9, "bold"))
-        self.chat.tag_config("agente",  foreground="#FFD700", font=("Consolas", 9, "bold"))
+        self.chat.tag_config("bueno",   foreground="#00ff88", font=("Consolas", 9, "bold"))
+        self.chat.tag_config("malo",    foreground="#ff4444", font=("Consolas", 9, "bold"))
 
         tk.Frame(self.ventana, bg=ACCENT2, height=1).pack(fill=tk.X)
 
+        # Feedback bar
+        feedback_bar = tk.Frame(self.ventana, bg="#0a0f1a", height=36)
+        feedback_bar.pack(fill=tk.X)
+        feedback_bar.pack_propagate(False)
+
+        tk.Label(feedback_bar, text="Feedback:",
+                 font=("Consolas", 8), bg="#0a0f1a", fg=TXT2).pack(side=tk.LEFT, padx=(16,8), pady=8)
+
+        self.feedback_btns = {}
+        emojis = {"1":"😡", "2":"😕", "3":"😐", "4":"😊", "5":"🤩"}
+        for puntuacion, emoji in emojis.items():
+            btn = tk.Button(
+                feedback_bar,
+                text=f"{emoji} {puntuacion}",
+                font=("Consolas", 9),
+                bg="#0a0f1a", fg=TXT2,
+                relief="flat", bd=0, padx=8,
+                activebackground=ACCENT2,
+                command=lambda p=int(puntuacion): self._dar_feedback(p)
+            )
+            btn.pack(side=tk.LEFT, pady=4)
+            self.feedback_btns[puntuacion] = btn
+
+        self.feedback_status = tk.Label(feedback_bar, text="",
+                                         font=("Consolas", 8), bg="#0a0f1a", fg="#00ff88")
+        self.feedback_status.pack(side=tk.RIGHT, padx=16)
+
+        tk.Button(
+            feedback_bar, text="Exportar dataset",
+            font=("Consolas", 8), bg="#0a0f1a", fg="#FFD700",
+            relief="flat", bd=0, padx=8,
+            command=self._exportar_dataset
+        ).pack(side=tk.RIGHT, padx=8)
+
+        tk.Frame(self.ventana, bg=BG2, height=1).pack(fill=tk.X)
+
+        # Input
         bottom = tk.Frame(self.ventana, bg=BG2, height=56)
         bottom.pack(fill=tk.X)
         bottom.pack_propagate(False)
 
-        self.status = tk.Label(bottom, text="● Iniciando...",
+        self.status = tk.Label(bottom, text="Iniciando...",
                                font=("Consolas", 8), bg=BG2, fg=TXT2)
         self.status.pack(side=tk.BOTTOM, anchor=tk.W, padx=16, pady=(0,4))
 
@@ -167,7 +210,7 @@ class AetherOpsUI:
         if self.brain:
             self.brain.limpiar_memoria()
         self.chat.config(state="normal")
-        self.chat.insert(tk.END, f"\n  Perfil cambiado a: ", "sistema")
+        self.chat.insert(tk.END, f"\n  Perfil: ", "sistema")
         self.chat.insert(tk.END, f"{perfil.upper()}\n", "perfil")
         self.chat.config(state="disabled")
         self.chat.see(tk.END)
@@ -191,7 +234,7 @@ class AetherOpsUI:
     def _limpiar_memoria(self):
         if self.brain:
             self.brain.limpiar_memoria()
-            self._mensaje_sistema("Memoria limpiada — nueva conversacion.")
+            self._mensaje_sistema("Memoria limpiada.")
 
     def _cargar_pdf(self):
         ruta = fd.askopenfilename(
@@ -205,13 +248,41 @@ class AetherOpsUI:
     def _procesar_pdf(self, ruta):
         resultado = self.rag.cargar_pdf(ruta)
         self._mensaje_sistema(resultado)
-        docs = self.rag.documentos_cargados
-        self.pdf_label.config(text=f"{len(docs)} doc(s)")
+        self.pdf_label.config(text=f"{len(self.rag.documentos_cargados)} doc(s)")
+
+    def _dar_feedback(self, puntuacion: int):
+        if not self.ultima_respuesta:
+            self.feedback_status.config(text="Haz una pregunta primero")
+            return
+        guardar_feedback(self.ultima_pregunta, self.ultima_respuesta, puntuacion)
+        emojis = {1:"😡", 2:"😕", 3:"😐", 4:"😊", 5:"🤩"}
+        self.feedback_status.config(text=f"Guardado {emojis[puntuacion]} {puntuacion}/5")
+        tag = "bueno" if puntuacion >= 4 else "malo" if puntuacion <= 2 else "sistema"
+        self.chat.config(state="normal")
+        self.chat.insert(tk.END, f"  Feedback: {puntuacion}/5 {emojis[puntuacion]}\n", tag)
+        self.chat.config(state="disabled")
+        self.chat.see(tk.END)
+        self.ventana.after(3000, lambda: self.feedback_status.config(text=""))
+
+    def _mostrar_stats(self):
+        stats = estadisticas_feedback()
+        mensaje = (
+            f"Total respuestas evaluadas: {stats['total']}\n"
+            f"Puntuacion promedio: {stats['promedio']}/5\n"
+            f"Respuestas buenas (4-5): {stats['buenos']}\n"
+            f"Respuestas malas (1-2): {stats['malos']}"
+        )
+        self._mensaje_sistema(f"\n--- Estadisticas RLHF ---\n{mensaje}\n")
+
+    def _exportar_dataset(self):
+        total, ruta = exportar_dataset_entrenamiento()
+        self._mensaje_sistema(f"Dataset exportado: {total} ejemplos buenos en {ruta}")
 
     def _enviar(self):
         pregunta = self.entrada.get().strip()
         if not pregunta or not self.brain:
             return
+        self.ultima_pregunta = pregunta
         self.entrada.delete(0, tk.END)
         self.chat.config(state="normal")
         self.chat.insert(tk.END, f"\n  Tu  ", "label")
@@ -230,6 +301,7 @@ class AetherOpsUI:
         else:
             respuesta = self.brain.responder(pregunta, contexto)
 
+        self.ultima_respuesta = respuesta
         self.chat.config(state="normal")
         self.chat.insert(tk.END, f"  AetherOps  ", "label")
         self.chat.insert(tk.END, f"→ {respuesta}\n", "bot")

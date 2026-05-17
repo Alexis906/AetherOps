@@ -4,9 +4,7 @@ from pydantic import BaseModel
 import uvicorn
 import os
 import shutil
-
-from core.brain import AetherOpsBrain
-from core.rag import AetherOpsRAG
+import requests
 
 app = FastAPI(title="AetherOps API", version="1.0.0")
 
@@ -17,10 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print("⚡ Iniciando AetherOps API...")
-brain = AetherOpsBrain()
-rag = AetherOpsRAG()
-print("✅ AetherOps API lista.")
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+
+documentos = []
 
 class PreguntaRequest(BaseModel):
     pregunta: str
@@ -29,6 +28,26 @@ class PreguntaRequest(BaseModel):
 class PreguntaResponse(BaseModel):
     respuesta: str
     documentos_cargados: int
+
+def preguntar_hf(pregunta: str, contexto: str = "") -> str:
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    prompt = f"Eres AetherOps, la IA personal de Fabricio. {contexto}\nPregunta: {pregunta}\nRespuesta:"
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "max_new_tokens": 100,
+            "temperature": 0.7,
+            "return_full_text": False
+        }
+    }
+    try:
+        response = requests.post(HF_API_URL, headers=headers, json=payload, timeout=30)
+        result = response.json()
+        if isinstance(result, list) and len(result) > 0:
+            return result[0].get("generated_text", "No pude responder.").strip()
+        return "No pude responder en este momento."
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 @app.get("/")
 def inicio():
@@ -43,45 +62,22 @@ def inicio():
 def estado():
     return {
         "estado": "online",
-        "documentos": len(rag.documentos_cargados),
-        "lista_documentos": rag.documentos_cargados
+        "documentos": len(documentos)
     }
 
 @app.post("/preguntar", response_model=PreguntaResponse)
 def preguntar(request: PreguntaRequest):
-    perfil_path = os.path.join("data", "perfiles", f"{request.perfil}.txt")
-    contexto = ""
-    if os.path.exists(perfil_path):
-        with open(perfil_path, "r", encoding="utf-8") as f:
-            contexto = f.read()
-
-    if rag.tiene_documentos():
-        contexto_rag = rag.buscar(request.pregunta)
-        if contexto_rag:
-            contexto += "\n\nInformacion de documentos:\n" + contexto_rag
-
-    respuesta = brain.responder(request.pregunta, contexto)
+    contexto = f"Perfil activo: {request.perfil}."
+    respuesta = preguntar_hf(request.pregunta, contexto)
     return PreguntaResponse(
         respuesta=respuesta,
-        documentos_cargados=len(rag.documentos_cargados)
+        documentos_cargados=len(documentos)
     )
-
-@app.post("/cargar-pdf")
-async def cargar_pdf(archivo: UploadFile = File(...)):
-    temp_path = f"temp_{archivo.filename}"
-    with open(temp_path, "wb") as f:
-        shutil.copyfileobj(archivo.file, f)
-    resultado = rag.cargar_pdf(temp_path)
-    os.remove(temp_path)
-    return {
-        "mensaje": resultado,
-        "documentos_totales": len(rag.documentos_cargados)
-    }
 
 @app.post("/limpiar-memoria")
 def limpiar_memoria():
-    brain.limpiar_memoria()
     return {"mensaje": "Memoria limpiada correctamente"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

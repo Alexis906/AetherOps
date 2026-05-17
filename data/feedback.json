@@ -1,0 +1,37 @@
+[
+  {
+    "fecha": "2026-05-16 17:54:46",
+    "pregunta": "Quien eres?",
+    "respuesta": "Soy una inteligencia artificial personal llamado Fabricio. He sido creado por el software personalizado AetherOps. He aprendido de todos los que he interactuado con y estoy mejorando continuamente.",
+    "puntuacion": 1,
+    "comentario": ""
+  },
+  {
+    "fecha": "2026-05-16 17:55:43",
+    "pregunta": "Cuanto es 350 * 12?",
+    "respuesta": "[CALCULAR] El resultado de 350 * 12 es 4200",
+    "puntuacion": 5,
+    "comentario": ""
+  },
+  {
+    "fecha": "2026-05-16 17:56:10",
+    "pregunta": "Que hora es?",
+    "respuesta": "[HORA] Fecha y hora actual: 16/05/2026 17:55:49",
+    "puntuacion": 5,
+    "comentario": ""
+  },
+  {
+    "fecha": "2026-05-16 17:57:33",
+    "pregunta": "Busca en internet noticias de Peru",
+    "respuesta": "[WEB] Encontre esto en internet:\n1. Peru: Peru, officially the Republic of Peru, is a country in western South America. It is bordered to the north by Ecuador and Colombia, to the east by Braz\n2. Peru: Flag of Peru Peru, officially the Republic of Peru, is a presidential republic in western South America bordering Ecuador, Colombia, Brazil, Bolivia, \n",
+    "puntuacion": 4,
+    "comentario": ""
+  },
+  {
+    "fecha": "2026-05-16 17:58:28",
+    "pregunta": "Guarda una nota que debo estudiar Python manana",
+    "respuesta": "[NOTA] Nota guardada correctamente: debo estudiar python manana",
+    "puntuacion": 5,
+    "comentario": ""
+  }
+]

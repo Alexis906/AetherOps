@@ -9,7 +9,7 @@ class AetherOpsBrain:
     def __init__(self):
         print("⚡ Iniciando AetherOps con modelo entrenado...")
         base_model = "Qwen/Qwen2.5-0.5B-Instruct"
-        finetuned = "modelo-finetuned"
+        finetuned = "modelo-rlhf"
 
         self.tokenizer = AutoTokenizer.from_pretrained(finetuned, trust_remote_code=True)
         base = AutoModelForCausalLM.from_pretrained(base_model, torch_dtype=torch.float32, device_map="cpu", trust_remote_code=True)
