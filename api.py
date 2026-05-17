@@ -14,7 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+groq_key = os.environ.get("GROQ_API_KEY", "NO_KEY")
+print(f"GROQ KEY encontrada: {groq_key[:8]}...")
+client = Groq(api_key=groq_key)
 
 perfiles = {
     "personal": "Eres AetherOps, una IA personal de Fabricio. Respondes en español, eres directo y útil.",
